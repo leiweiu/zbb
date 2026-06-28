@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2026年三班倒值班表</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Microsoft YaHei', Arial, sans-serif; padding: 20px; background: #fff; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        h1 { text-align: center; font-size: 28px; font-weight: bold; color: #333; margin-bottom: 8px; }
+        .subtitle { text-align: center; font-size: 14px; color: #666; margin-bottom: 16px; }
+        .legend { display: flex; justify-content: center; gap: 40px; margin-bottom: 20px; flex-wrap: wrap; }
+        .legend-item { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+        .legend-box { width: 24px; height: 24px; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; font-size: 11px; }
+        .legend-box.ye { background: #4472c4; }
+        .legend-box.zhang { background: #5b9bd5; }
+        .legend-box.wei { background: #1f497d; }
+        .form-row { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; padding: 12px 16px; background: #f8f9fa; border-radius: 6px; flex-wrap: wrap; }
+        .form-label { font-size: 14px; color: #333; font-weight: 500; }
+        .form-select { padding: 6px 12px; font-size: 14px; border: 1px solid #ddd; border-radius: 4px; background: white; min-width: 100px; }
+        .form-btn { padding: 6px 20px; font-size: 14px; font-weight: bold; color: white; background: #2c5aa0; border: none; border-radius: 4px; cursor: pointer; }
+        .form-btn:hover { background: #1f497d; }
+        .month-section { margin-bottom: 24px; page-break-inside: avoid; }
+        .month-title { font-size: 18px; font-weight: bold; color: white; margin-bottom: 10px; padding: 6px 12px; background: #2c5aa0; border-radius: 4px; display: inline-block; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th { background: #f0f0f0; font-weight: bold; padding: 8px 4px; text-align: center; border: 1px solid #ddd; }
+        th.weekend { background: #e0e0e0; color: #c00000; }
+        td { padding: 6px 4px; text-align: center; border: 1px solid #ddd; vertical-align: top; min-height: 60px; }
+        td.other-month { background: #f5f5f5; color: #999; }
+        td.weekend { background: #fff8f0; }
+        .day-number { font-size: 16px; font-weight: bold; color: #333; display: block; }
+        td.weekend .day-number { color: #c00000; }
+        td.other-month .day-number { color: #bbb; }
+        .day-divider { border-top: 1px solid #ccc; margin: 4px 0; }
+        .day-shift { display: block; padding: 2px 4px; border-radius: 2px; font-weight: bold; font-size: 11px; color: white; margin-top: 2px; }
+        .day-shift.ye { background: #4472c4; }
+        .day-shift.zhang { background: #5b9bd5; }
+        .day-shift.wei { background: #1f497d; }
+        @media print {
+            body { padding: 0; }
+            .container { max-width: none; }
+            .form-row { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>三班倒轮班日历</h1>
+        <p class="subtitle">每人上1天休2天（y-z-w循环） 周一为每周第一天</p>
+        
+        <div class="legend">
+            <div class="legend-item"><div class="legend-box ye">y</div><span>y值班</span></div>
+            <div class="legend-item"><div class="legend-box zhang">z</div><span>z值班</span></div>
+            <div class="legend-item"><div class="legend-box wei">w</div><span>w值班</span></div>
+        </div>
+
+        <div class="form-row">
+            <span class="form-label">年份：</span>
+            <select id="yearSelect" class="form-select">
+                <option value="2026">2026年</option>
+            </select>
+            <span class="form-label">月份：</span>
+            <select id="monthSelect" class="form-select">
+                <option value="0">1月</option>
+                <option value="1">2月</option>
+                <option value="2">3月</option>
+                <option value="3">4月</option>
+                <option value="4">5月</option>
+                <option value="5" selected>6月</option>
+                <option value="6">7月</option>
+                <option value="7">8月</option>
+                <option value="8">9月</option>
+                <option value="9">10月</option>
+                <option value="10">11月</option>
+                <option value="11">12月</option>
+            </select>
+            <span class="form-label">显示月数：</span>
+            <select id="monthCountSelect" class="form-select">
+                <option value="1">1个月</option>
+                <option value="3">3个月</option>
+                <option value="6" selected>6个月</option>
+                <option value="12">12个月</option>
+            </select>
+            <span class="form-label">首日值班：</span>
+            <select id="firstShiftSelect" class="form-select">
+                <option value="0" selected>y</option>
+                <option value="1">z</option>
+                <option value="2">w</option>
+            </select>
+            <button id="generateBtn" class="form-btn" onclick="generateCalendar()">生成日历</button>
+            <button id="printBtn" class="form-btn" onclick="window.print()">打印</button>
+            <button id="exportBtn" class="form-btn" onclick="exportToWord()">导出Word</button>
+        </div>
+
+        <div id="calendarContainer"></div>
+    </div>
+
+    <script>
+        const lunarInfo = [
+            0x04bd8,0x04ae0,0x0a570,0x054d5,0x0d260,0x0d950,0x16554,0x056a0,0x09ad0,0x055d2,
+            0x04ae0,0x0a5b6,0x0a4d0,0x0d250,0x1d255,0x0b540,0x0d6a0,0x0ada2,0x095b0,0x14977,
+            0x04970,0x0a4b0,0x0b4b5,0x06a50,0x06d40,0x1ab54,0x02b60,0x09570,0x052f2,0x04970,
+            0x06566,0x0d4a0,0x0ea50,0x06e95,0x05ad0,0x02b60,0x186e3,0x092e0,0x1c8d7,0x0c950,
+            0x0d4a0,0x1d8a6,0x0b550,0x056a0,0x1a5b4,0x025d0,0x092d0,0x0d2b2,0x0a950,0x0b557,
+            0x06ca0,0x0b550,0x15355,0x04da0,0x0a5d0,0x14573,0x052d0,0x0a9a8,0x0e950,0x06aa0,
+            0x0aea6,0x0ab50,0x04b60,0x0aae4,0x0a570,0x05260,0x0f263,0x0d950,0x05b57,0x056a0,
+            0x096d0,0x04dd5,0x04ad0,0x0a4d0,0x0d4d4,0x0d250,0x0d558,0x0b540,0x0b5a0,0x195a6,
+            0x095b0,0x049b0,0x0a974,0x0a4b0,0x0b27a,0x06a50,0x06d40,0x0af46,0x0ab60,0x09570,
+            0x04af5,0x04970,0x064b0,0x074a3,0x0ea50,0x06b58,0x055c0,0x0ab60,0x096d5,0x092e0,
+            0x0c960,0x0d954,0x0d4a0,0x0da50,0x07552,0x056a0,0x0abb7,0x025d0,0x092d0,0x0cab5,
+            0x0a950,0x0b4a0,0x0baa4,0x0ad50,0x055d9,0x04ba0,0x0a5b0,0x15176,0x052b0,0x0a930,
+            0x07954,0x06aa0,0x0ad50,0x05b52,0x04b60,0x0a6e6,0x0a4e0,0x0d260,0x0ea65,0x0d530,
+            0x05aa0,0x076a3,0x096d0,0x04bd7,0x04ad0,0x0a4d0,0x1d0b6,0x0d250,0x0d520,0x0dd45,
+            0x0b5a0,0x056d0,0x055b2,0x049b0,0x0a577,0x0a4b0,0x0aa50,0x1b255,0x06d20,0x0ada0
+        ];
+
+        const lunarMonth = ["正","二","三","四","五","六","七","八","九","十","冬","腊"];
+        const lunarDay = ["初一","初二","初三","初四","初五","初六","初七","初八","初九","初十",
+                         "十一","十二","十三","十四","十五","十六","十七","十八","十九","二十",
+                         "廿一","廿二","廿三","廿四","廿五","廿六","廿七","廿八","廿九","三十"];
+
+        function lYearDays(y) {
+            let i, sum = 348;
+            for(i=0x8000; i>0x8; i>>=1) sum += (lunarInfo[y-1900] & i)? 1: 0;
+            return(sum+leapDays(y));
+        }
+
+        function leapDays(y) {
+            if(leapMonth(y)) return((lunarInfo[y-1900] & 0x10000)? 30: 29);
+            return(0);
+        }
+
+        function leapMonth(y) {
+            return(lunarInfo[y-1900] & 0xf);
+        }
+
+        function monthDays(y,m) {
+            return((lunarInfo[y-1900] & (0x10000>>m))? 30: 29);
+        }
+
+        function toLunar(date) {
+            let y = date.getFullYear();
+            let m = date.getMonth();
+            let d = date.getDate();
+            
+            let baseDate = new Date(1900,0,31);
+            let offset = Math.floor((date - baseDate)/86400000);
+            
+            let iYear, daysOfYear = 0;
+            for(iYear=1900; iYear<2100 && offset>0; iYear++) {
+                daysOfYear = lYearDays(iYear);
+                offset -= daysOfYear;
+            }
+            
+            if(offset < 0) {
+                offset += daysOfYear;
+                iYear--;
+            }
+            
+            let lunarYear = iYear;
+            let leap = leapMonth(iYear);
+            let isLeap = false;
+            
+            let iMonth, daysOfMonth = 0;
+            for(iMonth=1; iMonth<13 && offset>0; iMonth++) {
+                if(leap>0 && iMonth==(leap+1) && isLeap==false) {
+                    --iMonth;
+                    isLeap = true;
+                    daysOfMonth = leapDays(iYear);
+                } else {
+                    daysOfMonth = monthDays(iYear, iMonth);
+                }
+                offset -= daysOfMonth;
+                if(isLeap == true && iMonth==(leap+1)) isLeap = false;
+            }
+            
+            if(offset==0 && leap>0 && iMonth==leap+1) {
+                if(isLeap) {
+                    isLeap = false;
+                } else {
+                    isLeap = true;
+                    --iMonth;
+                }
+            }
+            
+            if(offset<0) {
+                offset += daysOfMonth;
+                --iMonth;
+            }
+            
+            let lunarMonthNum = iMonth;
+            let lunarDayNum = offset + 1;
+            
+            return {
+                year: lunarYear,
+                month: lunarMonthNum,
+                day: Math.floor(lunarDayNum),
+                isLeap: isLeap
+            };
+        }
+
+        function formatLunar(lunar) {
+            if(lunar.day === 1) {
+                return (lunar.isLeap ? "闰" : "") + lunarMonth[lunar.month-1] + "月";
+            }
+            return lunarDay[lunar.day-1];
+        }
+
+        function getShiftForDay(dayIndex, firstShift) {
+            const shifts = ['ye', 'zhang', 'wei'];
+            const shiftIndex = (dayIndex + firstShift) % 3;
+            return shifts[shiftIndex];
+        }
+
+        function getMondayStartWeekday(date) {
+            const day = date.getDay();
+            return day === 0 ? 6 : day - 1;
+        }
+
+        function generateCalendar() {
+            const year = parseInt(document.getElementById('yearSelect').value);
+            const startMonth = parseInt(document.getElementById('monthSelect').value);
+            const monthCount = parseInt(document.getElementById('monthCountSelect').value);
+            const firstShift = parseInt(document.getElementById('firstShiftSelect').value);
+            const weekdays = ["一", "二", "三", "四", "五", "六", "日"];
+            const monthNames = ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"];
+            
+            let dayIndex = 0;
+            for(let m = 0; m < startMonth; m++) {
+                dayIndex += new Date(year, m + 1, 0).getDate();
+            }
+            
+            let html = '';
+            
+            for(let offset = 0; offset < monthCount; offset++) {
+                const month = (startMonth + offset) % 12;
+                const displayYear = year + Math.floor((startMonth + offset) / 12);
+                
+                const firstDay = new Date(displayYear, month, 1);
+                const lastDay = new Date(displayYear, month + 1, 0);
+                const daysInMonth = lastDay.getDate();
+                const startWeekday = getMondayStartWeekday(firstDay);
+                
+                html += '<div class="month-section">';
+                html += '<div class="month-title">' + displayYear + '年' + monthNames[month] + '</div>';
+                html += '<table>';
+                html += '<thead><tr>';
+                for(let i = 0; i < 7; i++) {
+                    const isWeekend = i >= 5;
+                    html += '<th' + (isWeekend ? ' class="weekend"' : '') + '>' + weekdays[i] + '</th>';
+                }
+                html += '</tr></thead><tbody>';
+                
+                const prevMonthLastDay = new Date(displayYear, month, 0).getDate();
+                const cells = [];
+                
+                for(let j = startWeekday - 1; j >= 0; j--) {
+                    cells.push({ day: prevMonthLastDay - j, type: 'prev' });
+                }
+                
+                for(let d = 1; d <= daysInMonth; d++) {
+                    const cd = new Date(displayYear, month, d);
+                    const wd = getMondayStartWeekday(cd);
+                    const shift = getShiftForDay(dayIndex + d - 1, firstShift);
+                    cells.push({
+                        day: d, type: 'current',
+                        isWeekend: wd >= 5,
+                        shift: shift
+                    });
+                }
+                
+                const totalCells = startWeekday + daysInMonth;
+                const remaining = (7 - (totalCells % 7)) % 7;
+                for(let j = 1; j <= remaining; j++) {
+                    cells.push({ day: j, type: 'next' });
+                }
+                
+                for(let r = 0; r < cells.length; r += 7) {
+                    html += '<tr>';
+                    for(let c = 0; c < 7; c++) {
+                        const cell = cells[r + c];
+                        let cellClass = '';
+                        if(cell.type === 'prev' || cell.type === 'next') {
+                            cellClass = ' other-month';
+                        } else if(cell.isWeekend) {
+                            cellClass = ' weekend';
+                        }
+                        html += '<td' + cellClass + ' style="vertical-align:middle;"><span class="day-number">' + cell.day + '</span></td>';
+                    }
+                    html += '</tr>';
+                    html += '<tr>';
+                    for(let c = 0; c < 7; c++) {
+                        const cell = cells[r + c];
+                        let cellClass = '';
+                        if(cell.type === 'prev' || cell.type === 'next') {
+                            cellClass = ' other-month';
+                        } else if(cell.isWeekend) {
+                            cellClass = ' weekend';
+                        }
+                        let shiftContent = '';
+                        if(cell.shift) {
+                            const shiftLabel = cell.shift.charAt(0);
+                            shiftContent = '<span class="day-shift ' + cell.shift + '">' + shiftLabel + '</span>';
+                        }
+                        html += '<td' + cellClass + ' style="vertical-align:middle;border-top:1px solid #000;">' + shiftContent + '</td>';
+                    }
+                    html += '</tr>';
+                }
+                
+                html += '</tbody></table></div>';
+                dayIndex += daysInMonth;
+            }
+            
+            document.getElementById('calendarContainer').innerHTML = html;
+        }
+        
+        function exportToWord() {
+            const content = document.getElementById('calendarContainer').innerHTML;
+            const html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>' +
+                'table { width: 100%; border-collapse: collapse; font-size: 13px; font-family: Microsoft YaHei; }' +
+                'th { background: #f0f0f0; font-weight: bold; padding: 8px 4px; text-align: center; border: 1px solid #ddd; }' +
+                'th.weekend { background: #e0e0e0; color: #c00000; }' +
+                'td { padding: 6px 4px; text-align: center; border: 1px solid #ddd; vertical-align: top; }' +
+                'td.weekend { background: #fff8f0; }' +
+                'td.other-month { background: #f5f5f5; color: #999; }' +
+                '.day-number { font-size: 16px; font-weight: bold; color: #333; }' +
+                '.day-shift { display: inline-block; padding: 2px 4px; border-radius: 2px; font-weight: bold; font-size: 11px; color: white; }' +
+                '.day-shift.ye { background: #4472c4; }' +
+                '.day-shift.zhang { background: #5b9bd5; }' +
+                '.day-shift.wei { background: #1f497d; }' +
+                '.month-title { font-size: 18px; font-weight: bold; color: white; margin-bottom: 10px; padding: 6px 12px; background: #2c5aa0; border-radius: 4px; display: inline-block; }' +
+                '.month-section { margin-bottom: 24px; }' +
+                '</style></head><body>' + content + '</body></html>';
+            
+            const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = '值班表.doc';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+        
+        generateCalendar();
+    </script>
+</body>
+</html>
